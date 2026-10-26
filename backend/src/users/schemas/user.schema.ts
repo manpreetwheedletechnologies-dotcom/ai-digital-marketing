@@ -1,0 +1,169 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
+
+export type UserDocument = User & Document;
+
+@Schema({ timestamps: true })
+export class User {
+  @Prop({ required: true })
+  name: string;
+
+  @Prop({ required: true, unique: true })
+  email: string;
+
+  @Prop({ required: true })
+  passwordHash: string;
+
+  @Prop({ default: 'free' })
+  subscriptionTier: string;
+
+  @Prop({ default: 'client' })
+  role: string; // 'admin', 'client', 'agency', 'superadmin'
+
+  @Prop({ default: true })
+  isActive: boolean;
+
+  @Prop({ default: 0 })
+  walletBalance: number;
+
+  @Prop()
+  googleDeveloperToken?: string;
+
+  @Prop()
+  googleUserId?: string;
+
+
+  @Prop()
+  googleClientId?: string;
+
+  @Prop()
+  googleClientSecret?: string;
+
+  @Prop()
+  googleCustomerId?: string;
+
+  @Prop()
+  googleRefreshToken?: string;
+
+  /** OAuth access token for Google Ads API (short-lived; refresh when integrating full OAuth) */
+  @Prop()
+  googleAccessToken?: string;
+
+  @Prop()
+  googleTokenExpiry?: number;
+
+  @Prop({ default: false })
+  googleSearchConsoleConnected?: boolean;
+
+  @Prop()
+  metaAppId?: string;
+
+  @Prop()
+  metaAppSecret?: string;
+
+  @Prop()
+  metaAccessToken?: string;
+  @Prop({ required: false })
+  metaAdAccountId?: string;
+
+  @Prop({ required: false })
+  metaAdAccountName?: string;
+
+  @Prop({ required: false })
+  metaBusinessId?: string;
+
+  @Prop({ required: false })
+  metaBusinessName?: string;
+
+  @Prop()
+  linkedinAccessToken?: string;
+
+  @Prop()
+  linkedinRefreshToken?: string;
+
+  @Prop()
+  linkedinPersonUrn?: string;
+
+  @Prop()
+  twitterAccessToken?: string;
+
+  @Prop()
+  twitterRefreshToken?: string;
+
+  @Prop()
+  twitterUserId?: string;
+
+  @Prop()
+  twitterUsername?: string; // The @handle (e.g. WheedleTech)
+
+  @Prop()
+  twitterName?: string; // Display name (e.g. Wheedle Technologies)
+
+  @Prop({ required: false })
+  twitterAdAccountId?: string;
+
+  @Prop({ required: false })
+  twitterAdAccountName?: string;
+
+  // YouTube (Social Hub). Google OAuth, scope youtube.upload + youtube.readonly
+  @Prop()
+  youtubeAccessToken?: string;
+
+  @Prop()
+  youtubeRefreshToken?: string;
+
+  @Prop()
+  youtubeChannelId?: string;
+
+  @Prop()
+  youtubeChannelTitle?: string;
+
+  @Prop()
+  instagramAccessToken?: string;
+
+  @Prop()
+  instagramUserId?: string;
+
+  @Prop({ type: [String], default: [] })
+  permissions: string[]; // e.g., ['dashboard', 'ads', 'analytics', 'superadmin']
+
+  @Prop({ default: 'INR' })
+  currency: string;
+
+  @Prop({ default: 'India' })
+  country: string;
+
+  @Prop({ default: false })
+  onboardingCompleted: boolean;
+
+  @Prop()
+  brandName?: string;
+
+  @Prop()
+  websiteUrl?: string;
+
+  @Prop()
+  industry?: string;
+
+  @Prop()
+  metaPixelId?: string;
+
+  @Prop()
+  metaPageId?: string;
+
+  // Regulatory & Restricted Niches Compliance (Protects against Google/Meta suspensions)
+  @Prop()
+  regulatoryLicenseType?: string;
+
+  @Prop()
+  regulatoryLicenseNumber?: string;
+
+  @Prop()
+  regulatoryCertificateUrl?: string;
+
+  @Prop({ default: false })
+  isRestrictedNicheCertified?: boolean;
+}
+
+export const UserSchema = SchemaFactory.createForClass(User);
+

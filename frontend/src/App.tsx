@@ -1,0 +1,350 @@
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { Header } from './dashboard/components/Header';
+import { Sidebar } from './dashboard/components/Sidebar';
+import { Crm } from './dashboard/pages/Crm';
+import { Campaigns } from './dashboard/pages/Campaigns';
+import { Content } from './dashboard/pages/Content';
+import { ChatbotBuilder } from './dashboard/pages/Chatbot';
+import { Analytics } from './dashboard/pages/Analytics';
+import Billing from './dashboard/pages/Billing';
+// @ts-ignore
+import Home from './landing/pages/Home';
+// @ts-ignore
+import Features from './landing/pages/Features';
+// @ts-ignore
+import Tutorial from "./landing/pages/tutorial";
+import // @ts-ignore
+Help from './landing/pages/Help';
+import // @ts-ignore
+PricingPage from './landing/pages/Pricingpage';
+import // @ts-ignore
+Resources from './landing/pages/Resources';
+import Register from './landing/pages/Register';
+// @ts-ignore
+import Contact from './landing/pages/Contact';
+import PrivacyPolicy from './landing/pages/PrivacyPolicy';
+import TermsOfService from './landing/pages/TermsOfService';
+import DataDeletion from './landing/pages/DataDeletion';
+import AgentEcosystem from './landing/pages/AgentEcosystem';
+// @ts-ignore
+import CoworkerDetail from './landing/pages/CoworkerDetail';
+// @ts-ignore
+import Security from './landing/pages/Security';
+import Onboarding from './landing/pages/Onboarding';
+import { Settings } from './dashboard/pages/Settings';
+import { Seo } from './dashboard/pages/Seo';
+import { Social } from './dashboard/pages/Social';
+import { PostPublisher } from './dashboard/pages/PostPublisher';
+import { Agents } from './dashboard/pages/Agents';
+import { Roles } from './dashboard/pages/Roles';
+import { Users } from './dashboard/pages/Users';
+import { AdminDashboard } from './dashboard/pages/AdminDashboard';
+import { Workflows } from './dashboard/pages/Workflows';
+import { Messaging } from './dashboard/pages/Messaging';
+import { AdsManager } from './dashboard/pages/AdsManager';
+import { DraftAiRecs } from './dashboard/pages/DraftAiRecs';
+import { AdInsights } from './dashboard/pages/AdInsights';
+import { AiAnalysis } from './dashboard/pages/AiAnalysis';
+import { AiReports } from './dashboard/pages/AiReports';
+import { OptimizeGoal } from './dashboard/pages/OptimizeGoal';
+import { BrandProfile } from './dashboard/pages/BrandProfile';
+import { Products } from './dashboard/pages/Products';
+import { ChatEmbed } from './dashboard/pages/ChatEmbed';
+import { Presentation } from './dashboard/pages/Presentation';
+import { LinkedInCrm } from './dashboard/pages/LinkedInCrm';
+import { CallingAgent } from './dashboard/pages/CallingAgent';
+
+import { Templates } from './dashboard/pages/Templates';
+import { hydrateSession } from './store/slices/authSlice';
+import { setTheme } from './store/slices/themeSlice';
+import { addNotification, fetchNotifications } from './store/slices/notificationSlice';
+import AiCreativeWorkspacePage from './dashboard/pages/AiCreativeWorkspacePage';
+import { Notifications } from './dashboard/pages/Notifications';
+import { Logs } from './dashboard/pages/Logs';
+
+import io from 'socket.io-client';
+import type { AppDispatch } from './store';
+import { Activity } from 'lucide-react';
+import RecommendationsPage from './dashboard/pages/RecommendationsPage';
+import AnalyticsPage from './dashboard/pages/AnalyticsPage';
+import CustomersPage from './dashboard/pages/CustomersPage';
+import InboxPage from './dashboard/pages/InboxPage';
+import DashboardPage from './dashboard/pages/DashboardPage';
+import GoogleBusinessTester from './dashboard/pages/Googlebusinesstester';
+import PostsPage from './dashboard/pages/PostsPage';
+
+const ProtectedRoute = ({ 
+  children, 
+  requiredPermission,
+  allowIncompleteOnboarding
+}: { 
+  children: React.ReactNode, 
+  requiredPermission?: string,
+  allowIncompleteOnboarding?: boolean
+}) => {
+  const { isAuthenticated, status, user } = useSelector((state: any) => state.auth);
+
+  if (status === 'loading' || (status === 'idle' && localStorage.getItem('access_token'))) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
+        <Activity size={32} color="var(--accent-primary)" className="animate-fade-in" style={{ animationIterationCount: 'infinite' }} />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && (status === 'failed' || (status === 'idle' && !localStorage.getItem('access_token')))) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Pre-Dashboard Policy Gate: Enforce Google & Meta account setup before entering dashboard
+  if (user && user.onboardingCompleted === false && user.role !== 'superadmin' && !allowIncompleteOnboarding) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  // RBAC Engine Validation
+  if (requiredPermission && user) {
+    const perms = user.permissions || [];
+    const canViewUsers = requiredPermission === 'view_users' && perms.includes('manage_users');
+    let hasPerm = perms.includes(requiredPermission);
+    if (perms.includes('*')) {
+      if (user.role === 'superadmin' || user.role === 'admin') {
+        hasPerm = true;
+      } else {
+        const adminModules = ['superadmin', 'view_users', 'manage_users', 'manage_roles'];
+        if (!adminModules.includes(requiredPermission)) {
+          hasPerm = true;
+        }
+      }
+    }
+    if (user.role === 'superadmin' || perms.includes('superadmin')) {
+      hasPerm = true;
+    }
+    if (!hasPerm && !canViewUsers) {
+      return <Navigate to="/crm" replace />;
+    }
+  }
+
+  return <>{children}</>;
+};
+
+const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="app-container">
+      <Sidebar />
+      <div className="main-content">
+        <Header />
+        <div className="page-container">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Full-bleed layout: no padding wrapper, pages manage their own spacing
+const DashboardLayoutFull = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="app-container">
+      <Sidebar />
+      <div className="main-content" style={{ minWidth: 0 }}>
+        <Header />
+        <div style={{ flex: 1, overflow: 'auto', minHeight: 0, minWidth: 0 }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Dark theme version for CRM
+const DarkDashboardLayoutFull = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="app-container">
+      <Sidebar />
+      <div className="main-content" style={{ minWidth: 0 }}>
+        <Header />
+        <div style={{ flex: 1, overflow: 'auto', minHeight: 0, minWidth: 0 }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Campaign page gets no sidebar/header — pure full-screen wizard
+const CampaignLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="app-container">
+      <Sidebar />
+      <div className="main-content" style={{ minWidth: 0 }}>
+        <div style={{ flex: 1, overflow: 'auto', minHeight: 0, minWidth: 0 }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+import { useLocation } from 'react-router-dom';
+
+function ScrollToTop() {
+  const { pathname, search, hash } = useLocation();
+
+  useEffect(() => {
+    // If not navigating with a specific agent deep-link or hash, scroll immediately to top
+    if (!hash && !search.includes('agent=')) {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname]);
+
+  return null;
+}
+
+const App: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { isAuthenticated } = useSelector((state: any) => state.auth);
+  // const { mode } = useSelector((state: any) => state.theme);
+
+  useEffect(() => {
+    // Initialize theme from localStorage or default to dark
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      dispatch(setTheme(savedTheme));
+    } else {
+      dispatch(setTheme('dark'));
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    // Only attempt hydration if a token exists to avoid race condition on boot
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      dispatch(hydrateSession());
+    }
+  }, [dispatch]);
+
+  // Connect Real-Time Matrix Socket.IO
+  useEffect(() => {
+    if (isAuthenticated) {
+      const socket = io(import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL, {
+        auth: { token: localStorage.getItem('access_token') }
+      });
+
+      socket.on('connect', () => {
+        console.log('🔗 Live AI WebSockets Established');
+      });
+
+      // Listen for Global App Notifications emitted by Backend logic
+      socket.on('notification', (data) => {
+        dispatch(addNotification({
+          id: data.id || Date.now().toString(),
+          title: data.title,
+          message: data.message,
+          type: data.type || 'info',
+          category: data.category || 'general',
+          time: data.time || new Date().toISOString(),
+          read: false,
+          actionUrl: data.actionUrl || null,
+          actionLabel: data.actionLabel || null,
+        }));
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    }
+  }, [isAuthenticated, dispatch]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchNotifications({ limit: 50 }));
+    }
+  }, [isAuthenticated, dispatch]);
+
+  return (
+    <Router>
+      <ScrollToTop />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/landing" element={<Home />} />
+        <Route path="/features" element={<Features />} />
+        <Route path="/tutorial" element={<Tutorial />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/resources" element={<Resources />} />
+        <Route path="/help" element={<Help />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/login" element={<Register />} />
+        <Route path="/signup" element={<Register />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/terms-and-conditions" element={<TermsOfService />} />
+        <Route path="/data-deletion" element={<DataDeletion />} />
+        <Route path="/data-deletion-instructions" element={<DataDeletion />} />
+        <Route path="/agent-ecosystem" element={<AgentEcosystem />} />
+        <Route path="/coworkers/:id" element={<CoworkerDetail />} />
+        <Route path="/security" element={<Security />} />
+        <Route path="/chatbot-embed/:id" element={<ChatEmbed />} />
+        <Route path="/presentation" element={<Presentation />} />
+        <Route path="/onboarding" element={<ProtectedRoute allowIncompleteOnboarding={true}><Onboarding /></ProtectedRoute>} />
+
+        {/* Dashboard Routes — AdsGo full-bleed pages */}
+        <Route path="/crm" element={<ProtectedRoute><DarkDashboardLayoutFull><Crm /></DarkDashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/campaigns" element={<ProtectedRoute><CampaignLayout><Campaigns /></CampaignLayout></ProtectedRoute>} />
+        <Route path="/templates" element={<ProtectedRoute><DashboardLayoutFull><Templates /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/content" element={<ProtectedRoute><DashboardLayoutFull><Content /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/content/ai-workspace" element={<ProtectedRoute><DashboardLayoutFull><AiCreativeWorkspacePage /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/chatbot" element={<ProtectedRoute><DashboardLayout><ChatbotBuilder /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute><DashboardLayout><Analytics /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/billing" element={<ProtectedRoute><DashboardLayout><Billing /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/seo" element={<ProtectedRoute><DashboardLayout><Seo /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/seo/:view" element={<ProtectedRoute><DashboardLayout><Seo /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/social" element={<ProtectedRoute><DashboardLayout><Social /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/post-publisher" element={<ProtectedRoute><DashboardLayoutFull><PostPublisher /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/autopost" element={<Navigate to="/post-publisher" replace />} />
+        <Route path="/ai-agents" element={<ProtectedRoute><DashboardLayout><Agents /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/admin-dashboard" element={<ProtectedRoute requiredPermission="superadmin"><DashboardLayoutFull><AdminDashboard /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/admin" element={<Navigate to="/admin-dashboard" replace />} />
+        <Route path="/roles" element={<ProtectedRoute requiredPermission="superadmin"><DashboardLayout><Roles /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute requiredPermission="view_users"><DashboardLayout><Users /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/workflows" element={<ProtectedRoute><DashboardLayout><Workflows /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/messaging" element={<ProtectedRoute><DashboardLayout><Messaging /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><DashboardLayout><Notifications /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/calling-agent" element={<ProtectedRoute><DashboardLayoutFull><CallingAgent /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/log" element={<ProtectedRoute requiredPermission="superadmin"><DashboardLayout><Logs /></DashboardLayout></ProtectedRoute>} />
+
+        {/* AI Optimize Sub-routes */}
+        <Route path="/ai/ads-manager" element={<ProtectedRoute requiredPermission="ads"><DashboardLayoutFull><AdsManager /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/ai/draft-recs" element={<ProtectedRoute requiredPermission="ads"><DashboardLayoutFull><DraftAiRecs /></DashboardLayoutFull></ProtectedRoute>} />
+
+        {/* Analytics Sub-routes */}
+        <Route path="/analytics/insights" element={<ProtectedRoute requiredPermission="analytics"><DashboardLayoutFull><AdInsights /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/analytics/ai-analysis" element={<ProtectedRoute requiredPermission="analytics"><DashboardLayoutFull><AiAnalysis /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/analytics/ai-reports" element={<ProtectedRoute requiredPermission="analytics"><DashboardLayoutFull><AiReports /></DashboardLayoutFull></ProtectedRoute>} />
+
+        {/* Brand Center Sub-routes */}
+        <Route path="/brand/goal" element={<ProtectedRoute requiredPermission="settings"><DashboardLayoutFull><OptimizeGoal /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/brand/profile" element={<ProtectedRoute requiredPermission="settings"><DashboardLayoutFull><BrandProfile /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/brand/products" element={<ProtectedRoute requiredPermission="settings"><DashboardLayoutFull><Products /></DashboardLayoutFull></ProtectedRoute>} />
+
+        {/* LinkedIn AI CRM */}
+        <Route path="/linkedin-crm" element={<ProtectedRoute><DarkDashboardLayoutFull><LinkedInCrm /></DarkDashboardLayoutFull></ProtectedRoute>} />
+        {/* Reviews & Reputation Management */}
+        <Route path="/reputation/dashboard" element={<ProtectedRoute><DashboardLayoutFull><DashboardPage /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/reputation/inbox" element={<ProtectedRoute><DashboardLayoutFull><InboxPage /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/reputation/posts" element={<ProtectedRoute><DashboardLayoutFull><PostsPage /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/reputation/customers" element={<ProtectedRoute><DashboardLayoutFull><CustomersPage /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/reputation/analytics" element={<ProtectedRoute><DashboardLayoutFull><AnalyticsPage /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/reputation/recommendations" element={<ProtectedRoute><DashboardLayoutFull><RecommendationsPage /></DashboardLayoutFull></ProtectedRoute>} />
+        <Route path="/google-business/tester" element={<ProtectedRoute><DashboardLayoutFull><GoogleBusinessTester /></DashboardLayoutFull></ProtectedRoute>} />
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;
